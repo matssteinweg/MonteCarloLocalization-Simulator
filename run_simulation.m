@@ -1,4 +1,4 @@
-% Run Simulation of a MCL localization for landmark based maps and range
+% Run Simulation of a MC localization for landmark based maps and range
 % measurements.
 function run_simulation(app, root, simulationfile)
     %% Initialize simulation data
@@ -43,6 +43,12 @@ function run_simulation(app, root, simulationfile)
     %% Initialize parameters and data structures
     % initial wheel-encoder readings
     enc = [0; 0]; 
+    
+    % odometry parameters
+    E_T = 2048; % encoder ticks per wheel evolution
+    B= 0.35; % distance between contact points of wheels in m
+    R_L = 0.1; % radius of the left wheel in m
+    R_R = 0.1; % radius of the right wheel in m
 
     % number of timesteps in simulation data
     n_timesteps = size(simulation_data, 2);
@@ -57,6 +63,7 @@ function run_simulation(app, root, simulationfile)
     
     % save simulation statistics
     pose_errors = zeros(3, n_timesteps);
+    sigmas = zeros(9, n_timesteps);
     odom_plots = gobjects(1 , n_timesteps);
     ground_truth_plots = gobjects(1 , n_timesteps);
     short_term_plots = [];
@@ -99,10 +106,10 @@ function run_simulation(app, root, simulationfile)
         delta_enc = enc - penc; % wheel-encoder difference
 
         % compute odometry information
-        u = calculate_odometry(delta_enc(1), delta_enc(2), delta_t, S);
+        [v, omega] = calculate_odometry(delta_enc(1), delta_enc(2), E_T, B, R_R, R_L, delta_t);
 
         % run Particle Filter
-        [S, measurement_info] = particle_filter(S, u, z, association_ground_truth);
+        [S, measurement_info] = particle_filter(S, v, omega, delta_t, z, association_ground_truth);
         
         % get measurement statistics from Particle Filter
         outliers = length(find(measurement_info == 2));
@@ -113,11 +120,13 @@ function run_simulation(app, root, simulationfile)
         
         % get pose estimate
         mu = mean(S(1:3,:), 2);
+        mu(3) = atan2(mean(sin(S(3, :))), mean(cos(S(3, :))));
         pos_sigma = cov(S(1,:),S(2,:));
-        var_theta = var(S(3,:));
+        var_theta = var(sin(S(3, :))) + var(cos(S(3, :)));
         sigma = zeros(3,3);
         sigma(1:2, 1:2) = pos_sigma;
         sigma(3, 3) = var_theta;
+        sigmas(:, timestep) = sigma(:);
 
         % compute pose error
         pose_error = true_pose - mu;
@@ -180,9 +189,9 @@ function run_simulation(app, root, simulationfile)
         app.xField.Value = mu(1);
         app.yField.Value = mu(2);
         app.thetaField.Value = round(mu(3) / (2*pi) * 360);
-        app.xField_2.Value = pose_error(1);
-        app.yField_2.Value = pose_error(2);
-        app.thetaField_2.Value = round(pose_error(3) / (2*pi) * 360);
+        app.Error_x_Field.Value = pose_error(1);
+        app.Error_y_Field.Value = pose_error(2);
+        app.Error_theta_Field.Value = round(pose_error(3) / (2*pi) * 360);
         
         % close-up plot
         cla(app.CloseUpAxis)
@@ -219,20 +228,53 @@ function run_simulation(app, root, simulationfile)
     end
     
     if stop_execution == 0
+        
         % get error statistics
+        mex = mean(pose_errors(1,:));
+        mey = mean(pose_errors(2,:));
+        met = mean(pose_errors(3,:) / (2*pi) * 360);
         maex = mean(abs(pose_errors(1,:)));
         maey = mean(abs(pose_errors(2,:)));
-        maet = mean(abs(pose_errors(3,:)));
-
+        maet = mean(abs(pose_errors(3,:) / (2*pi) * 360));
+        
+        % plot errors and covariance
+        figure('Name', 'Evolution State Estimation Errors');
+        clf;
+        subplot(3,1,1);
+        plot(pose_errors(1,:));
+        ylabel('error\_x [m]');
+        title(sprintf('error on x, mean error = %.2fm, mean absolute err = %.2fm', mex, maex));
+        subplot(3,1,2);
+        plot(pose_errors(2,:));
+        ylabel('error\_y [m]');
+        title(sprintf('error on y, mean error = %.2fm, mean absolute err = %.2fm', mey, maey));
+        subplot(3,1,3);
+        plot(pose_errors(3,:) / (2*pi) * 360);
+        xlabel('simulation time [s]');
+        ylabel('error\_\theta [°]');
+        title(sprintf('error on \\theta, mean error = %.2f^{\\circ}, mean absolute err = %.2f^{\\circ} ', met, maet));
+        
+        figure('Name', 'Evolution State Estimation Covariance Matrix');
+        clf;
+        subplot(3,1,1);
+        plot(sigmas(1,:));
+        title('\Sigma(1,1)');
+        subplot(3,1,2);
+        plot(sigmas(5,:));
+        title('\Sigma(2,2)');
+        subplot(3,1,3);
+        plot(sigmas(9,:));
+        title('\Sigma(3,3)');
+        
         % update fields
         app.ErrorLabel.Text = 'Mean Absolute Error';
-        app.xField_2.Value = maex;
-        app.yField_2.Value = maey;
-        app.thetaField_2.Value = round(maet / (2*pi) * 360);
+        app.Error_x_Field.Value = maex;
+        app.Error_y_Field.Value = maey;
+        app.Error_theta_Field.Value = round(maet);
 
         % change stop button in app
         app.StopButton.Text = 'End';
-        app.PauseButton.Enable = 'off';
+        app.Pause5sButton.Enable = 'off';
         app.DropDown.Enable = 'off';
     end
 end

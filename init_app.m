@@ -17,18 +17,58 @@ function init_app(app, root, mapfile, dataset_id)
     
     % global localization or tracking problem
     global global_localization 
+    
+    % enable buttons, spinners and switches
+    app.Spinner_R12.Enable = 'on';
+    app.Spinner_R3.Enable = 'on';
+    app.Spinner_Q1.Enable = 'on';
+    app.Spinner_Q2.Enable = 'on';
+    app.ParticlesSlider.Enable = 'on';
+    app.ParticleEditField.Enable = 'on';
+    app.GlobalTrackingSwitch.Enable = 'on';
+    app.OutlierSwitch.Enable = 'on';
+    app.OutlierSpinner.Enable = 'on';
+    app.MultinomialButton.Enable = 'on';
+    app.SystematicButton.Enable = 'on';
+    app.OffButton.Enable = 'on';
+    app.Measurement_CheckBox.Enable = 'on';
+    app.GroundTruth_CheckBox.Enable = 'on';
+    app.Odometry_CheckBox.Enable = 'on';
+    app.DefaultButton.Enable = 'on';
+    app.DataAssociationSwitch.Enable = 'on';
+    app.GlobalTrackingSwitch.Enable = 'on';
 
     % Dataset 1
     if dataset_id == 1
-        default_R = [0.1^2, 0, 0; 0, 0.1^2, 0; 0, 0, (2*pi/360)^2];
-        default_Q = [0.1^2, 0; 0, (2*pi/360)^2];
+        default_R = [0.01^2, 0, 0; 0, 0.01^2, 0; 0, 0, 0.01^2];
+        default_Q = [0.01^2, 0; 0, 0.01^2];
         default_lambda_psi = 2;
         global_localization = 0;
         M = 1000;
     % Dataset 2
     elseif dataset_id == 2
-        default_R = [0.1^2, 0, 0; 0, 0.1^2, 0; 0, 0, (2*pi/360)^2];
-        default_Q = [0.1^2, 0; 0, (2*pi/360)^2];
+        default_R = [0.01^2, 0, 0; 0, 0.1^2, 0; 0, 0, 0.01^2];
+        default_Q = [0.1^2, 0; 0, 0.1^2];
+        default_lambda_psi = 2;
+        global_localization = 0;
+        M = 1000;
+        % Dataset 2
+    elseif dataset_id == 3
+        default_R = [1^2, 0, 0; 0, 1^2, 0; 0, 0, 1^2];
+        default_Q = [0.1^2, 0; 0, 0.1^2];
+        default_lambda_psi = 0;
+        global_localization = 0;
+        M = 1000;
+        % Dataset 2
+    elseif dataset_id == 4
+        default_R = [0.1^2, 0, 0; 0, 0.1^2, 0; 0, 0, 0.1^2];
+        default_Q = [0.1^2, 0; 0, 0.1^2];
+        default_lambda_psi = 2;
+        global_localization = 0;
+        M = 1000;% Dataset 2
+    elseif dataset_id == 5
+        default_R = [0.1^2, 0, 0; 0, 0.1^2, 0; 0, 0, 0.1^2];
+        default_Q = [0.1^2, 0; 0, 0.1^2];
         default_lambda_psi = 2;
         global_localization = 0;
         M = 1000;
@@ -42,10 +82,10 @@ function init_app(app, root, mapfile, dataset_id)
     lambda_psi = default_lambda_psi;
 
     % display values in spinners
-    app.xySpinner.Value = sqrt(R(1, 1));
-    app.thetaSpinner.Value = round(sqrt(R(3, 3)) / (2*pi) * 360);
-    app.rSpinner.Value = sqrt(Q(1, 1));
-    app.thetaSpinner_2.Value = round(sqrt(Q(2, 2)) / (2*pi) * 360);
+    app.Spinner_R12.Value = sqrt(R(1, 1));
+    app.Spinner_R3.Value = round(sqrt(R(3, 3)) / (2*pi) * 360);
+    app.Spinner_Q1.Value = sqrt(Q(1, 1));
+    app.Spinner_Q2.Value = round(sqrt(Q(2, 2)) / (2*pi) * 360);
     
     % display number of particles
     app.ParticlesSlider.Value = M;
@@ -118,11 +158,11 @@ function init_app(app, root, mapfile, dataset_id)
     
     % set default values
     show_measurements = true;
-    show_ground_truth = false;
-    show_odometry = false;
+    show_ground_truth = true;
+    show_odometry = true;
     
     % update check boxes
-    app.CheckBox1.Value = show_measurements;
-    app.CheckBox2.Value = show_ground_truth;
-    app.CheckBox3.Value = show_odometry;
+    app.Measurement_CheckBox.Value = show_measurements;
+    app.GroundTruth_CheckBox.Value = show_ground_truth;
+    app.Odometry_CheckBox.Value = show_odometry;
 end
