@@ -5,7 +5,7 @@
 %           j                              1X1
 % Outputs:  
 %           h                              2XM
-function z_j = measurement_model(S, j)
+function z_j = observation_model(S, j)
 
 global map % map including the coordinates of all landmarks | shape 2Xn for n landmarks
 global M % number of particles

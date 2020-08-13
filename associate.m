@@ -12,7 +12,7 @@ function [outlier, Psi, c] = associate(S_bar, z, association_ground_truth)
         association_ground_truth = [];
     end
 
-    global KNOWN_ASSOCIATIONS % wheter to perform data association or use ground truth
+    global DATA_ASSOCIATION % wheter to perform data association or use ground truth
     global lambda_psi % threshold on average likelihood for outlier detection
     global Q % covariance matrix of the measurement model
     global M % number of particles
@@ -22,32 +22,35 @@ function [outlier, Psi, c] = associate(S_bar, z, association_ground_truth)
     n_measurements = size(z, 2); % number of measurements
 
     z_hat = zeros(2, M, N); % predicted measurements
-    eta = 1/(2*pi*det(Q)^0.5); % mahalanobis factor
+    eta = 1/(2*pi*sqrt(det(Q))); % mahalanobis factor
 
     % get predicted measurements for all landmarks
     for j = 1:N
-        z_hat(:, :, j) = measurement_model(S_bar, j);
+        z_hat(:, :, j) = observation_model(S_bar, j);
     end
     z_hat = reshape(z_hat, [2, M*N]);
     
     % compute innovation
-    nu = repmat(z, 1, M*N) - repelem(z_hat, 1, n_measurements); % nu: [2, M*N*n_m]
+    nu = repmat(z, 1, M*N) - repelem(z_hat, 1, n_measurements); % nu: [2, M*N*n]
     nu(2, :) = mod(nu(2,:)+pi,2*pi) - pi;
     % compute likelihood
-    psi = eta * exp(-0.5 * sum((nu' / Q) .* nu', 2)); % psi_tmp: [M*N*n_m,1]
-    psi = permute(reshape(psi, n_measurements, M, N), [3, 1, 2]); % psi: [N,n_m,M]
+    psi = eta * exp(-0.5 * sum((nu' / Q) .* nu', 2)); % psi_tmp: [M*N*n,1]
+    psi = permute(reshape(psi, n_measurements, M, N), [3, 1, 2]); % psi: [N,n,M]
     
     % get maximum likelihood and associated index
     [Psi, c] = max(psi, [], 1); % Psi: [1,n,M]
     
     % use ground truth information about correct landmark
-    if KNOWN_ASSOCIATIONS
+
+    if strcmp(DATA_ASSOCIATION, 'Off')
     for n = 1:n_measurements
-        Psi(1, n, :) = psi(association_ground_truth(n) == landmark_ids, n, :);
+        ground_truth_landmark_id = find(association_ground_truth(n) == landmark_ids);
+        Psi(1, n, :) = psi(ground_truth_landmark_id, n, :);
+        c(1, n, :) = ground_truth_landmark_id;
     end
     end
     
     % outlier detection
-    outlier = mean(reshape(Psi, [n_measurements, M]), 2) <= lambda_psi;
+    outlier = mean(reshape(Psi, [n_measurements, M]), 2) <= lambda_psi - 1.0e-6;
 
 end

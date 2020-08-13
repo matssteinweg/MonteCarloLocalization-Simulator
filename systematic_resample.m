@@ -16,8 +16,12 @@ function S = systematic_resample(S_bar)
     
     r = rand() / M;
     for m = 1:M
-        i = find(CDF >= r + (m-1)/M, 1);
-        S(:, m) = S_bar(:, i);
+        k = find(CDF >= (r + (m-1)/M), 1, 'first');
+        if isempty(k)
+            k = M;
+            disp(k);
+        end
+        S(:, m) = S_bar(:, k);
         S(4, m) = 1 / M;
     end
 end
